@@ -8,12 +8,19 @@
 
 import UIKit
 
-class ViewController: UITableViewController {
+class ViewController: UITableViewController, UISearchResultsUpdating {
     
     var friends = [Friend]()
+    var filteredFriends = [Friend]()
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        let search = UISearchController(searchResultsController: nil)
+        search.obscuresBackgroundDuringPresentation = false
+        search.searchBar.placeholder = "Find a friend"
+        search.searchResultsUpdater = self
+        navigationItem.searchController = search
         
         DispatchQueue.global().async {
             do {
@@ -27,6 +34,7 @@ class ViewController: UITableViewController {
                 
                 DispatchQueue.main.async {
                     self.friends = downloadedFriends
+                    self.filteredFriends = downloadedFriends
                     self.tableView.reloadData()
                 }
             } catch {
@@ -36,17 +44,31 @@ class ViewController: UITableViewController {
     }
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return friends.count
+        return filteredFriends.count
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
-        let friend = friends[indexPath.row]
+        let friend = filteredFriends[indexPath.row]
         
         cell.textLabel?.text = friend.name
         cell.detailTextLabel?.text = friend.friends.map { $0.name }.joined(separator: ", ")
         
         return cell
+    }
+    
+    func updateSearchResults(for searchController: UISearchController) {
+        if let text = searchController.searchBar.text, !text.isEmpty {
+            filteredFriends = friends.filter {
+                $0.name.contains(text)
+                || $0.company.contains(text)
+                || $0.address.contains(text)
+            }
+        } else {
+            filteredFriends = friends
+        }
+        
+        tableView.reloadData()
     }
 }
 
